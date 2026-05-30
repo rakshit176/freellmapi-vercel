@@ -33,10 +33,15 @@ export function useChat(options: UseChatOptions = {}) {
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
+  // Use provided apiKey, or fall back to NEXT_PUBLIC_API_KEY from env
+  const apiKey = options.apiKey || process.env.NEXT_PUBLIC_API_KEY || '';
+
   // Fetch available models
   const fetchModels = useCallback(async () => {
     try {
-      const res = await fetch('/v1/models');
+      const headers: Record<string, string> = {};
+      if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+      const res = await fetch('/v1/models', { headers });
       if (!res.ok) return;
       const data = await res.json();
       const modelList = (data.data || []).map((m: any) => ({
@@ -49,7 +54,7 @@ export function useChat(options: UseChatOptions = {}) {
     } catch {
       // Silently fail
     }
-  }, []);
+  }, [apiKey]);
 
   // Stop generating
   const stopGenerating = useCallback(() => {
@@ -97,8 +102,8 @@ export function useChat(options: UseChatOptions = {}) {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
-      if (options.apiKey) {
-        headers['Authorization'] = `Bearer ${options.apiKey}`;
+      if (apiKey) {
+        headers['Authorization'] = `Bearer ${apiKey}`;
       }
 
       const response = await fetch('/v1/chat/completions', {
@@ -190,7 +195,7 @@ export function useChat(options: UseChatOptions = {}) {
         )
       );
     }
-  }, [messages, isLoading, selectedModel, options.apiKey, options.temperature, options.maxTokens]);
+  }, [messages, isLoading, selectedModel, apiKey, options.temperature, options.maxTokens]);
 
   // Clear chat
   const clearChat = useCallback(() => {
